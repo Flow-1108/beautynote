@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { logoutAction } from '@/actions/auth';
 import { LayoutDashboard, Users, Sparkles, CalendarDays, CreditCard, Clock } from 'lucide-react';
+import { MobileNav } from './mobile-nav';
 
 const navLinks = [
   { href: '/', label: 'Tableau de bord', icon: LayoutDashboard },
@@ -34,8 +35,8 @@ export function Navbar() {
           </span>
         </Link>
 
-        {/* Navigation links */}
-        <div className="flex items-center gap-1">
+        {/* Desktop Navigation - Hidden on mobile */}
+        <div className="hidden md:flex items-center gap-1">
           {navLinks.map((link) => {
             const Icon = link.icon;
             return (
@@ -45,21 +46,26 @@ export function Navbar() {
                 className="flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-prune-light hover:text-white"
               >
                 <Icon className="h-4 w-4" />
-                {link.label}
+                <span className="hidden lg:inline">{link.label}</span>
               </Link>
             );
           })}
         </div>
 
-        {/* Logout */}
-        <form action={logoutAction}>
-          <button
-            type="submit"
-            className="rounded-md px-3 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-prune-light hover:text-white"
-          >
-            Déconnexion
-          </button>
-        </form>
+        {/* Desktop Logout - Hidden on mobile */}
+        <div className="hidden md:block">
+          <form action={logoutAction}>
+            <button
+              type="submit"
+              className="rounded-md px-3 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-prune-light hover:text-white"
+            >
+              Déconnexion
+            </button>
+          </form>
+        </div>
+
+        {/* Mobile Navigation */}
+        <MobileNav />
       </div>
     </nav>
   );

@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { loginAction } from '@/actions/auth';
 import { useActionState } from 'react';
 
@@ -23,8 +24,18 @@ export default function LoginPage() {
       <div className="w-full max-w-sm space-y-6">
         {/* Header */}
         <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-prune">
-            BeautyNote
+          <div className="flex justify-center">
+            <Image
+              src="/navbar-logo.png"
+              alt="Beauty Note"
+              width={120}
+              height={120}
+              className="rounded-full"
+              priority
+            />
+          </div>
+          <h1 className="mt-4 text-3xl font-bold tracking-tight text-prune">
+            Beauty Note
           </h1>
           <p className="mt-2 text-sm text-secondary">
             Connectez-vous pour accéder au salon
