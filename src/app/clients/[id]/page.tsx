@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { getClientById, getClientHistory, getClientStats } from '@/actions/clients';
 import { formatPhone, formatDate, formatCents, isBirthdayMonth, getInitials } from '@/lib/utils';
 import { DeleteClientButton } from '@/components/clients/delete-client-button';
+import { EditLoyaltyButton } from '@/components/clients/edit-loyalty-button';
 
 export default async function ClientDetailPage({
   params,
@@ -93,8 +94,9 @@ export default async function ClientDetailPage({
             <dt className="text-sm font-medium text-secondary">
               Points de fidélité
             </dt>
-            <dd className="col-span-2 text-sm font-semibold text-prune">
+            <dd className="col-span-2 flex items-center text-sm font-semibold text-prune">
               {client.loyalty_points} points
+              <EditLoyaltyButton clientId={id} currentPoints={client.loyalty_points} />
             </dd>
           </div>
           <div className="grid grid-cols-3 gap-4 px-4 py-3">
