@@ -22,6 +22,18 @@ export function formatDate(isoDate: string): string {
 }
 
 /**
+ * Formate une heure ISO vers un affichage localisé (HH:MM).
+ * Ex: "2026-03-01T14:30:00Z" → "14:30"
+ */
+export function formatTime(isoString: string): string {
+  return new Date(isoString).toLocaleTimeString('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Europe/Paris',
+  });
+}
+
+/**
  * Formate un numéro de téléphone pour l'affichage.
  * Ex: "0612345678" → "06 12 34 56 78"
  */

@@ -45,7 +45,8 @@ export function EditPaymentModal({ payment, onClose }: EditPaymentModalProps) {
     if (result.error) {
       setError(result.error);
     } else {
-      onClose();
+      // Force page reload to show updated data
+      window.location.reload();
     }
   }
 

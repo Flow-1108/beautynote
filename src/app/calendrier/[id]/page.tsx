@@ -2,14 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getAppointmentById, completeAppointmentAction, cancelAppointmentAction } from '@/actions/appointments';
 import { getPaymentByAppointment, initiateCardPaymentAction, recordCashPaymentAction, checkPaymentStatusAction } from '@/actions/payments';
-import { formatCents, formatDate } from '@/lib/utils';
-
-function formatTime(isoString: string): string {
-  return new Date(isoString).toLocaleTimeString('fr-FR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
+import { formatCents, formatDate, formatTime } from '@/lib/utils';
 
 export default async function AppointmentDetailPage({
   params,

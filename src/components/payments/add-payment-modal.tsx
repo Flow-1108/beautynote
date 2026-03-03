@@ -22,7 +22,8 @@ export function AddPaymentModal({ clients, onClose }: AddPaymentModalProps) {
     async (_prevState: typeof initialState, formData: FormData) => {
       const result = await createManualPaymentAction(formData);
       if (result.success) {
-        onClose();
+        // Force page reload to show new payment
+        window.location.reload();
         return { error: '', success: true };
       }
       return { error: result.error || 'Erreur inconnue', success: false };

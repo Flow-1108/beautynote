@@ -99,6 +99,19 @@ export async function updateClientAction(id: string, formData: FormData) {
 export async function deleteClientAction(id: string) {
   const supabase = await createClient();
 
+  // Vérifier s'il y a des rendez-vous associés
+  const { data: appointments } = await supabase
+    .from('appointments')
+    .select('id')
+    .eq('client_id', id)
+    .limit(1);
+
+  if (appointments && appointments.length > 0) {
+    return { 
+      error: 'Impossible de supprimer ce client car il a des rendez-vous associés. Veuillez d\'abord supprimer ses rendez-vous.' 
+    };
+  }
+
   const { error } = await supabase.from('clients').delete().eq('id', id);
 
   if (error) {

@@ -1,14 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getClientById, getClientHistory, getClientStats } from '@/actions/clients';
-import { deleteClientAction } from '@/actions/clients';
-import {
-  formatPhone,
-  formatDate,
-  formatCents,
-  isBirthdayMonth,
-  getInitials,
-} from '@/lib/utils';
+import { formatPhone, formatDate, formatCents, isBirthdayMonth, getInitials } from '@/lib/utils';
+import { DeleteClientButton } from '@/components/clients/delete-client-button';
 
 export default async function ClientDetailPage({
   params,
@@ -28,11 +22,6 @@ export default async function ClientDetailPage({
     getClientHistory(id),
     getClientStats(id),
   ]);
-
-  const deleteWithId = async () => {
-    'use server';
-    await deleteClientAction(id);
-  };
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -69,14 +58,7 @@ export default async function ClientDetailPage({
           >
             Modifier
           </Link>
-          <form action={deleteWithId}>
-            <button
-              type="submit"
-              className="rounded-md bg-surface px-3 py-2 text-sm font-medium text-red-600 shadow-sm ring-1 ring-border hover:bg-red-50"
-            >
-              Supprimer
-            </button>
-          </form>
+          <DeleteClientButton clientId={id} />
         </div>
       </div>
 
