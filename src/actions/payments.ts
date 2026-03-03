@@ -304,3 +304,97 @@ export async function getCurrentMonthRevenue() {
 
   return { total, count };
 }
+
+// ============================================================
+// MODIFIER UN PAIEMENT EXISTANT
+// ============================================================
+
+export async function updatePaymentAction(
+  paymentId: string,
+  data: {
+    amount_cents?: number;
+    method?: 'card_sumup' | 'cash' | 'free';
+    status?: 'pending' | 'success' | 'failed' | 'cancelled';
+    created_at?: string;
+  }
+) {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from('payments')
+    .update(data)
+    .eq('id', paymentId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath('/paiements');
+  return { success: true };
+}
+
+// ============================================================
+// CRÉER UN PAIEMENT MANUEL (sans rendez-vous)
+// ============================================================
+
+export async function createManualPaymentAction(formData: FormData) {
+  const supabase = await createClient();
+
+  const clientId = formData.get('client_id') as string;
+  const amountEuros = parseFloat(formData.get('amount') as string);
+  const method = formData.get('method') as 'card_sumup' | 'cash' | 'free';
+  const createdAt = formData.get('created_at') as string;
+  const description = formData.get('description') as string;
+
+  if (!clientId || isNaN(amountEuros) || amountEuros < 0) {
+    return { error: 'Données invalides' };
+  }
+
+  const amountCents = Math.round(amountEuros * 100);
+
+  // Créer un rendez-vous "manuel" pour le paiement
+  const serviceId = '00000000-0000-0000-0000-000000000001'; // Service historique
+  const date = createdAt ? new Date(createdAt) : new Date();
+
+  const { data: appointment, error: aptError } = await supabase
+    .from('appointments')
+    .insert({
+      client_id: clientId,
+      starts_at: date.toISOString(),
+      ends_at: new Date(date.getTime() + 60 * 60 * 1000).toISOString(),
+      buffer_ends_at: new Date(date.getTime() + 75 * 60 * 1000).toISOString(),
+      status: 'completed',
+      is_home_service: false,
+      base_price_cents: amountCents,
+      birthday_discount_cents: 0,
+      loyalty_discount_cents: 0,
+      loyalty_points_used: 0,
+      final_price_cents: amountCents,
+      notes: description || 'Paiement manuel',
+    })
+    .select('id')
+    .single();
+
+  if (aptError) return { error: aptError.message };
+
+  // Créer le service associé
+  await supabase.from('appointment_services').insert({
+    appointment_id: appointment.id,
+    service_id: serviceId,
+    base_price_cents: amountCents,
+    duration_minutes: 60,
+    buffer_minutes: 15,
+  });
+
+  // Créer le paiement
+  const { error: paymentError } = await supabase.from('payments').insert({
+    appointment_id: appointment.id,
+    amount_cents: amountCents,
+    method: method,
+    status: 'success',
+    created_at: date.toISOString(),
+  });
+
+  if (paymentError) return { error: paymentError.message };
+
+  revalidatePath('/paiements');
+  return { success: true };
+}

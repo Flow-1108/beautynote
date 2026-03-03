@@ -1,6 +1,9 @@
 import Link from 'next/link';
 import { getPayments } from '@/actions/payments';
 import { formatCents, formatDate } from '@/lib/utils';
+import { PaymentTableRow } from '@/components/payments/payments-table-row';
+import { AddPaymentButton } from '@/components/payments/add-payment-button';
+import { createClient } from '@/lib/supabase/server';
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   pending: { label: 'En attente', color: 'bg-yellow-100 text-yellow-700' },
@@ -28,6 +31,13 @@ type MonthStats = {
 
 export default async function PaiementsPage() {
   const payments = await getPayments();
+  
+  // Récupérer la liste des clients pour le modal d'ajout
+  const supabase = await createClient();
+  const { data: clients } = await supabase
+    .from('clients')
+    .select('id, first_name, last_name')
+    .order('first_name');
 
   // Grouper les paiements par mois avec calculs détaillés
   const paymentsByMonth = payments.reduce((acc, payment) => {
@@ -112,9 +122,12 @@ export default async function PaiementsPage() {
             Historique des {payments.length} dernier{payments.length !== 1 ? 's' : ''} paiement{payments.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <div className="rounded-lg border border-border bg-surface p-4">
-          <p className="text-sm text-secondary">CA Total Brut</p>
-          <p className="mt-1 text-2xl font-bold text-prune">{formatCents(grandTotal)}</p>
+        <div className="flex items-center gap-4">
+          <AddPaymentButton clients={clients || []} />
+          <div className="rounded-lg border border-border bg-surface p-4">
+            <p className="text-sm text-secondary">CA Total Brut</p>
+            <p className="mt-1 text-2xl font-bold text-prune">{formatCents(grandTotal)}</p>
+          </div>
         </div>
       </div>
 
@@ -229,62 +242,15 @@ export default async function PaiementsPage() {
                         <th className="px-4 py-3 text-left text-xs font-medium uppercase text-secondary">
                           Statut
                         </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium uppercase text-secondary">
+                          Actions
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {monthData.payments.map((payment: any) => {
-                        const apt = payment.appointment as {
-                          id: string;
-                          starts_at: string;
-                          final_price_cents: number;
-                          client: { id: string; first_name: string; last_name: string } | null;
-                          appointment_services?: { id: string; service: { id: string; name: string } }[];
-                        } | null;
-
-                        const status = statusLabels[payment.status] ?? statusLabels.pending;
-                        
-                        // Récupérer les noms des services
-                        const serviceNames = apt?.appointment_services
-                          ?.map(as => as.service?.name)
-                          .filter(Boolean)
-                          .join(', ') || '—';
-
-                        return (
-                          <tr key={payment.id} className="hover:bg-surface-muted">
-                            <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground">
-                              {formatDate(payment.created_at)}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-sm">
-                              {apt?.client ? (
-                                <Link
-                                  href={`/clients/${apt.client.id}`}
-                                  className="text-prune hover:underline"
-                                >
-                                  {apt.client.first_name} {apt.client.last_name}
-                                </Link>
-                              ) : (
-                                '—'
-                              )}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-sm text-foreground">
-                              {serviceNames}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-foreground">
-                              {formatCents(payment.amount_cents)}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-sm text-secondary">
-                              {methodLabels[payment.method] ?? payment.method}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-sm">
-                              <span
-                                className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${status.color}`}
-                              >
-                                {status.label}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
+                      {monthData.payments.map((payment: any) => (
+                        <PaymentTableRow key={payment.id} payment={payment} />
+                      ))}
                     </tbody>
                   </table>
                 </div>
