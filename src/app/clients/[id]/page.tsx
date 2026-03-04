@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getClientById, getClientHistory, getClientStats } from '@/actions/clients';
-import { formatPhone, formatDate, formatCents, isBirthdayMonth, getInitials } from '@/lib/utils';
+import { formatPhone, formatDate, formatCents, formatTime, isBirthdayMonth, getInitials } from '@/lib/utils';
 import { DeleteClientButton } from '@/components/clients/delete-client-button';
 import { EditLoyaltyButton } from '@/components/clients/edit-loyalty-button';
 
@@ -190,8 +190,8 @@ export default async function ClientDetailPage({
                         )}
                       </div>
                       <p className="mt-1 text-sm text-secondary">
-                        {new Date(apt.starts_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} →{' '}
-                        {new Date(apt.ends_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                        {formatTime(apt.starts_at)} →{' '}
+                        {formatTime(apt.ends_at)}
                       </p>
                       <p className="mt-1 text-sm text-prune">{serviceNames}</p>
                       {payment && (

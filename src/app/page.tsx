@@ -3,7 +3,7 @@ import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { Users, Sparkles, CalendarDays, CreditCard, Clock, TrendingUp } from 'lucide-react';
 import { getCurrentMonthRevenue } from '@/actions/payments';
 import { getUpcomingWeekAppointments } from '@/actions/appointments';
-import { formatCents } from '@/lib/utils';
+import { formatCents, formatTime } from '@/lib/utils';
 
 export default async function DashboardPage() {
   const [revenue, upcomingAppointments] = await Promise.all([
@@ -138,7 +138,7 @@ export default async function DashboardPage() {
                         )}
                       </div>
                       <p className="mt-1 text-sm text-secondary">
-                        {date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} —{' '}
+                        {formatTime(apt.starts_at)} —{' '}
                         {client ? `${client.first_name} ${client.last_name}` : 'Client inconnu'}
                       </p>
                       <p className="mt-1 text-sm text-prune">{serviceNames}</p>
