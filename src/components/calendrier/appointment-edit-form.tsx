@@ -3,7 +3,7 @@
 import { useState, useEffect, useActionState } from 'react';
 import { updateAppointmentAction } from '@/actions/appointments';
 import { previewPricing } from '@/actions/pricing';
-import { formatCents, formatTime } from '@/lib/utils';
+import { formatCents, formatTime, formatDateInput } from '@/lib/utils';
 import { ClientSearch } from './client-search';
 import { ServiceSearch } from './service-search';
 import { useRouter } from 'next/navigation';
@@ -46,9 +46,8 @@ export function AppointmentEditForm({ appointmentId, appointment, clients, servi
   const [pricingLoading, setPricingLoading] = useState(false);
   const [forceOverlap, setForceOverlap] = useState(false);
 
-  // Date et heure initiales
-  const appointmentDate = new Date(appointment.starts_at);
-  const [date, setDate] = useState(appointmentDate.toISOString().slice(0, 10));
+  // Date et heure initiales (en timezone Europe/Paris)
+  const [date, setDate] = useState(formatDateInput(appointment.starts_at));
   const [time, setTime] = useState(formatTime(appointment.starts_at));
 
   // Rediriger après succès

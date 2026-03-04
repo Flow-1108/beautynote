@@ -34,6 +34,29 @@ export function formatTime(isoString: string): string {
 }
 
 /**
+ * Retourne heures + minutes en timezone Europe/Paris.
+ * Utilisé pour le positionnement dans la vue jour.
+ */
+export function getParisDecimalHours(isoString: string): number {
+  const timeStr = new Date(isoString).toLocaleTimeString('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'Europe/Paris',
+  });
+  const [h, m] = timeStr.split(':').map(Number);
+  return h + m / 60;
+}
+
+/**
+ * Formate une date ISO en YYYY-MM-DD selon le fuseau Europe/Paris.
+ * Utilisé pour les inputs HTML date.
+ */
+export function formatDateInput(isoString: string): string {
+  return new Date(isoString).toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
+}
+
+/**
  * Formate un numéro de téléphone pour l'affichage.
  * Ex: "0612345678" → "06 12 34 56 78"
  */

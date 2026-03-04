@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { formatCents, formatTime } from '@/lib/utils';
+import { formatCents, formatTime, getParisDecimalHours } from '@/lib/utils';
 import { Pencil } from 'lucide-react';
 
 type ServiceInfo = { id: string; name: string; category: string; duration_minutes: number; buffer_minutes: number };
@@ -37,8 +37,7 @@ const HOUR_END = 20;
 const SLOT_HEIGHT_PX = 60; // pixels par heure
 
 function timeToOffset(isoString: string): number {
-  const d = new Date(isoString);
-  const hours = d.getHours() + d.getMinutes() / 60;
+  const hours = getParisDecimalHours(isoString);
   return (hours - HOUR_START) * SLOT_HEIGHT_PX;
 }
 
