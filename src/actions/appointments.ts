@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { calculatePricing, spendLoyaltyPoints } from './pricing';
 import { isDateClosed } from './schedule';
+import { parisToUTC } from '@/lib/utils';
 import type { AppointmentInsert, AppointmentServiceInsert, AppointmentUpdate } from '@/types';
 
 // ============================================================
@@ -176,7 +177,8 @@ export async function createAppointmentAction(
 
   const clientId = formData.get('client_id') as string;
   const serviceIds = formData.getAll('service_ids') as string[];
-  const startsAtRaw = formData.get('starts_at') as string;
+  const dateStr = formData.get('date') as string;
+  const timeStr = formData.get('time') as string;
   const isHomeService = formData.get('is_home_service') === 'on';
   const forceOverlap = formData.get('force_overlap') === 'true';
   const forceClosedDate = formData.get('force_closed_date') === 'true';
@@ -189,7 +191,7 @@ export async function createAppointmentAction(
   if (serviceIds.length === 0) return { error: 'Veuillez sélectionner au moins un service.' };
 
   // Vérifier si la date est fermée (jour de fermeture ou congé)
-  const appointmentDate = startsAtRaw.split('T')[0];
+  const appointmentDate = dateStr;
   const closedCheck = await isDateClosed(appointmentDate);
   
   if (closedCheck.closed && !forceClosedDate) {
@@ -224,8 +226,8 @@ export async function createAppointmentAction(
 
   if (cliErr) return { error: `Client introuvable : ${cliErr.message}` };
 
-  // 4. Calculer les créneaux temporels
-  const startsAt = new Date(startsAtRaw);
+  // 4. Calculer les créneaux temporels (heure Paris → UTC)
+  const startsAt = parisToUTC(dateStr, timeStr);
   const endsAt = new Date(startsAt.getTime() + totalDuration * 60_000);
   const bufferEndsAt = new Date(endsAt.getTime() + maxBuffer * 60_000);
 
@@ -395,7 +397,8 @@ export async function updateAppointmentAction(
 
   const clientId = formData.get('client_id') as string;
   const serviceIds = formData.getAll('service_ids') as string[];
-  const startsAtRaw = formData.get('starts_at') as string;
+  const dateStr = formData.get('date') as string;
+  const timeStr = formData.get('time') as string;
   const isHomeService = formData.get('is_home_service') === 'on';
   const forceOverlap = formData.get('force_overlap') === 'true';
   const loyaltyPointsToSpend = parseInt(
@@ -439,8 +442,8 @@ export async function updateAppointmentAction(
 
   if (cliErr) return { error: `Client introuvable : ${cliErr.message}` };
 
-  // 5. Calculer les créneaux temporels
-  const startsAt = new Date(startsAtRaw);
+  // 5. Calculer les créneaux temporels (heure Paris → UTC)
+  const startsAt = parisToUTC(dateStr, timeStr);
   const endsAt = new Date(startsAt.getTime() + totalDuration * 60_000);
   const bufferEndsAt = new Date(endsAt.getTime() + maxBuffer * 60_000);
 

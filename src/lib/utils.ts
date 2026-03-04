@@ -57,6 +57,20 @@ export function formatDateInput(isoString: string): string {
 }
 
 /**
+ * Convertit une date + heure locale Paris en objet Date UTC.
+ * Gère automatiquement CET (UTC+1) et CEST (UTC+2).
+ * Ex: parisToUTC("2026-03-09", "13:30") → Date(2026-03-09T12:30:00Z)
+ */
+export function parisToUTC(dateStr: string, timeStr: string): Date {
+  const refDate = new Date(`${dateStr}T12:00:00Z`);
+  const utcRepr = refDate.toLocaleString('en-US', { timeZone: 'UTC' });
+  const parisRepr = refDate.toLocaleString('en-US', { timeZone: 'Europe/Paris' });
+  const offsetMs = new Date(parisRepr).getTime() - new Date(utcRepr).getTime();
+  const naiveMs = new Date(`${dateStr}T${timeStr}:00Z`).getTime();
+  return new Date(naiveMs - offsetMs);
+}
+
+/**
  * Formate un numéro de téléphone pour l'affichage.
  * Ex: "0612345678" → "06 12 34 56 78"
  */

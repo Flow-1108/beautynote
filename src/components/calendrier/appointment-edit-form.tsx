@@ -142,9 +142,6 @@ export function AppointmentEditForm({ appointmentId, appointment, clients, servi
         </div>
       </div>
 
-      {/* Hidden: starts_at combiné par JS dans un hidden field */}
-      <input type="hidden" name="starts_at" id="starts_at_hidden" />
-
       {/* Domicile */}
       <div className="flex items-center gap-2">
         <input
@@ -277,19 +274,6 @@ export function AppointmentEditForm({ appointmentId, appointment, clients, servi
         <button
           type="submit"
           disabled={isPending}
-          onClick={(e) => {
-            const form = e.currentTarget.form;
-            if (form) {
-              const date = (form.elements.namedItem('date') as HTMLInputElement).value;
-              const time = (form.elements.namedItem('time') as HTMLInputElement).value;
-              const localDate = new Date(`${date}T${time}:00`);
-              const offset = -localDate.getTimezoneOffset();
-              const sign = offset >= 0 ? '+' : '-';
-              const absOffset = Math.abs(offset);
-              const offsetStr = `${sign}${String(Math.floor(absOffset / 60)).padStart(2, '0')}:${String(absOffset % 60).padStart(2, '0')}`;
-              (form.elements.namedItem('starts_at') as HTMLInputElement).value = `${date}T${time}:00${offsetStr}`;
-            }
-          }}
           className="flex-1 rounded-md bg-prune px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-prune-light focus:outline-none focus:ring-2 focus:ring-prune focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isPending ? 'Modification en cours…' : 'Enregistrer les modifications'}
