@@ -3,7 +3,7 @@
 import { useState, useEffect, useActionState } from 'react';
 import { updateAppointmentAction } from '@/actions/appointments';
 import { previewPricing } from '@/actions/pricing';
-import { formatCents } from '@/lib/utils';
+import { formatCents, formatTime } from '@/lib/utils';
 import { ClientSearch } from './client-search';
 import { ServiceSearch } from './service-search';
 import { useRouter } from 'next/navigation';
@@ -49,9 +49,7 @@ export function AppointmentEditForm({ appointmentId, appointment, clients, servi
   // Date et heure initiales
   const appointmentDate = new Date(appointment.starts_at);
   const [date, setDate] = useState(appointmentDate.toISOString().slice(0, 10));
-  const [time, setTime] = useState(
-    appointmentDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', hour12: false })
-  );
+  const [time, setTime] = useState(formatTime(appointment.starts_at));
 
   // Rediriger après succès
   useEffect(() => {
@@ -254,8 +252,7 @@ export function AppointmentEditForm({ appointmentId, appointment, clients, servi
             {state.conflicts.map((c) => (
               <li key={c.id}>
                 {c.client_first_name} {c.client_last_name} — {c.service_name} (
-                {new Date(c.starts_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} →{' '}
-                {new Date(c.buffer_ends_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })})
+                {formatTime(c.starts_at)} → {formatTime(c.buffer_ends_at)})
               </li>
             ))}
           </ul>

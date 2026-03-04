@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { formatCents } from '@/lib/utils';
+import { formatCents, formatTime } from '@/lib/utils';
 import { Pencil } from 'lucide-react';
 
 type ServiceInfo = { id: string; name: string; category: string; duration_minutes: number; buffer_minutes: number };
@@ -40,13 +40,6 @@ function timeToOffset(isoString: string): number {
   const d = new Date(isoString);
   const hours = d.getHours() + d.getMinutes() / 60;
   return (hours - HOUR_START) * SLOT_HEIGHT_PX;
-}
-
-function formatTime(isoString: string): string {
-  return new Date(isoString).toLocaleTimeString('fr-FR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 }
 
 export function DayView({ date, appointments }: Props) {

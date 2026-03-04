@@ -3,7 +3,7 @@
 import { useState, useEffect, useActionState } from 'react';
 import { createAppointmentAction } from '@/actions/appointments';
 import { previewPricing } from '@/actions/pricing';
-import { formatCents } from '@/lib/utils';
+import { formatCents, formatTime } from '@/lib/utils';
 import { ClientSearch } from './client-search';
 import { ServiceSearch } from './service-search';
 import type { Client, CatalogueService, PricingBreakdown } from '@/types';
@@ -302,9 +302,7 @@ export function AppointmentForm({ clients, services, defaultDate }: Props) {
             {state.conflicts.map((c) => (
               <li key={c.id}>
                 {c.client_first_name} {c.client_last_name} — {c.service_name}
-                {' '}({new Date(c.starts_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                {' - '}
-                {new Date(c.buffer_ends_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })})
+                {' '}({formatTime(c.starts_at)} - {formatTime(c.buffer_ends_at)})
               </li>
             ))}
           </ul>

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { formatTime } from '@/lib/utils';
 
 type ServiceInfo = { id: string; name: string; category: string; duration_minutes: number; buffer_minutes: number };
 
@@ -21,13 +22,6 @@ type Props = {
   month: number;
   appointments: AppointmentRow[];
 };
-
-function formatTime(isoString: string): string {
-  return new Date(isoString).toLocaleTimeString('fr-FR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 function getCalendarGrid(year: number, month: number): (Date | null)[][] {
   const firstDay = new Date(year, month - 1, 1);
