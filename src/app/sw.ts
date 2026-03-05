@@ -1,14 +1,13 @@
 import { defaultCache } from "@serwist/next/worker";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
-import { Serwist } from "serwist";
+import { Serwist, NetworkFirst } from "serwist";
 
 // ============================================================
 // BeautyNote — Service Worker (Serwist)
 // ============================================================
 // Stratégies :
-//   - Precache : pages critiques (shell, offline)
-//   - NetworkFirst : pages dynamiques (RSC)
-//   - StaleWhileRevalidate : assets statiques
+//   - NetworkFirst : pages dynamiques (calendrier, clients, etc.)
+//   - defaultCache : stratégies par défaut de Serwist/Next.js
 //   - Offline fallback : /offline si réseau indisponible
 // ============================================================
 
@@ -25,7 +24,17 @@ const serwist = new Serwist({
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,
-  runtimeCaching: defaultCache,
+  runtimeCaching: [
+    // Forcer NetworkFirst pour TOUTES les pages dynamiques (HTML)
+    // Cela évite que le SW serve des pages en cache avec des données périmées
+    {
+      matcher: ({ request, url }) =>
+        request.destination === "document" && url.pathname !== "/offline",
+      handler: new NetworkFirst(),
+    },
+    // Garder les stratégies par défaut pour les assets (JS, CSS, images)
+    ...defaultCache,
+  ],
   fallbacks: {
     entries: [
       {
