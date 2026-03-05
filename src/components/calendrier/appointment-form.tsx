@@ -3,7 +3,7 @@
 import { useState, useEffect, useActionState } from 'react';
 import { createAppointmentAction } from '@/actions/appointments';
 import { previewPricing } from '@/actions/pricing';
-import { formatCents, formatTime } from '@/lib/utils';
+import { formatCents, formatTime, formatDateKey } from '@/lib/utils';
 import { ClientSearch } from './client-search';
 import { ServiceSearch } from './service-search';
 import type { Client, CatalogueService, PricingBreakdown } from '@/types';
@@ -47,7 +47,7 @@ export function AppointmentForm({ clients, services, defaultDate }: Props) {
   const [forceClosedDate, setForceClosedDate] = useState(false);
   const [formKey, setFormKey] = useState(0);
   const [successMsg, setSuccessMsg] = useState(false);
-  const today = defaultDate ?? new Date().toISOString().slice(0, 10);
+  const today = defaultDate ?? formatDateKey(new Date().toISOString());
   const [date, setDate] = useState(today);
   const [time, setTime] = useState('09:00');
 

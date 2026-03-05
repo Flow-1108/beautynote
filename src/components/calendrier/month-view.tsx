@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { formatTime } from '@/lib/utils';
+import { formatTime, getParisDay } from '@/lib/utils';
 
 type ServiceInfo = { id: string; name: string; category: string; duration_minutes: number; buffer_minutes: number };
 
@@ -69,10 +69,10 @@ export function MonthView({ year, month, appointments }: Props) {
     year: 'numeric',
   });
 
-  // Group appointments by day
+  // Group appointments by day (en timezone Paris)
   const byDay = new Map<number, typeof appointments>();
   for (const apt of appointments) {
-    const d = new Date(apt.starts_at).getDate();
+    const d = getParisDay(apt.starts_at);
     if (!byDay.has(d)) byDay.set(d, []);
     byDay.get(d)!.push(apt);
   }

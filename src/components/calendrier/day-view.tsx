@@ -63,6 +63,7 @@ export function DayView({ date, appointments }: Props) {
       day: 'numeric',
       month: 'long',
       year: 'numeric',
+      timeZone: 'Europe/Paris',
     });
 
   return (

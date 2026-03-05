@@ -18,6 +18,7 @@ export function formatDate(isoDate: string): string {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
+    timeZone: 'Europe/Paris',
   }).format(new Date(isoDate));
 }
 
@@ -62,12 +63,39 @@ export function formatDateInput(isoString: string): string {
  * Ex: parisToUTC("2026-03-09", "13:30") → Date(2026-03-09T12:30:00Z)
  */
 export function parisToUTC(dateStr: string, timeStr: string): Date {
-  const refDate = new Date(`${dateStr}T12:00:00Z`);
-  const utcRepr = refDate.toLocaleString('en-US', { timeZone: 'UTC' });
-  const parisRepr = refDate.toLocaleString('en-US', { timeZone: 'Europe/Paris' });
-  const offsetMs = new Date(parisRepr).getTime() - new Date(utcRepr).getTime();
+  // Use noon UTC as reference to avoid midnight edge cases
+  const probe = new Date(`${dateStr}T12:00:00Z`);
+  const parisHour = parseInt(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Europe/Paris',
+      hour: 'numeric',
+      hour12: false,
+    }).format(probe),
+  );
+  // probe is noon UTC (12), parisHour is 13 (CET) or 14 (CEST)
+  const offsetMs = (parisHour - 12) * 3600_000;
   const naiveMs = new Date(`${dateStr}T${timeStr}:00Z`).getTime();
   return new Date(naiveMs - offsetMs);
+}
+
+/**
+ * Retourne la clé YYYY-MM-DD d'une date ISO en timezone Europe/Paris.
+ * Utilisé pour grouper les RDV par jour dans les vues calendrier.
+ */
+export function formatDateKey(isoString: string): string {
+  return new Date(isoString).toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
+}
+
+/**
+ * Retourne le numéro du jour du mois en timezone Europe/Paris.
+ */
+export function getParisDay(isoString: string): number {
+  return parseInt(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Europe/Paris',
+      day: 'numeric',
+    }).format(new Date(isoString)),
+  );
 }
 
 /**

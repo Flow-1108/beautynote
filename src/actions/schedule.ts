@@ -103,8 +103,9 @@ export async function isDateClosed(date: string): Promise<{ closed: boolean; rea
   const supabase = await createClient();
   
   // Vérifier le jour de la semaine (0 = Lundi, 6 = Dimanche)
-  const dateObj = new Date(date);
-  const dayOfWeek = (dateObj.getDay() + 6) % 7; // Convertir dimanche=0 en dimanche=6
+  // On utilise new Date(date + 'T12:00:00Z') pour éviter les edge cases autour de minuit
+  const dateObj = new Date(date + 'T12:00:00Z');
+  const dayOfWeek = (dateObj.getUTCDay() + 6) % 7; // Convertir dimanche=0 en dimanche=6
   
   // 1. Vérifier si ce jour de la semaine est fermé
   const { data: businessHours } = await supabase

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { formatCents, formatTime } from '@/lib/utils';
+import { formatCents, formatTime, formatDateKey } from '@/lib/utils';
 
 type ServiceInfo = { id: string; name: string; category: string; duration_minutes: number; buffer_minutes: number };
 
@@ -51,13 +51,13 @@ export function WeekView({ startDate, appointments }: Props) {
 
   const formatNav = (d: Date) => d.toISOString().slice(0, 10);
 
-  // Group appointments by day
+  // Group appointments by day (en timezone Paris)
   const byDay = new Map<string, AppointmentRow[]>();
   for (const day of days) {
     byDay.set(day.toISOString().slice(0, 10), []);
   }
   for (const apt of appointments) {
-    const dayKey = new Date(apt.starts_at).toISOString().slice(0, 10);
+    const dayKey = formatDateKey(apt.starts_at);
     if (byDay.has(dayKey)) {
       byDay.get(dayKey)!.push(apt);
     }
