@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getAppointmentById, completeAppointmentAction, cancelAppointmentAction } from '@/actions/appointments';
-import { getPaymentByAppointment, checkPaymentStatusAction } from '@/actions/payments';
+import { getPaymentByAppointment, checkPaymentStatusAction, initiateCardPaymentAction, recordCashPaymentAction } from '@/actions/payments';
 import { formatCents, formatDate, formatTime } from '@/lib/utils';
 import { PaymentButtons } from '@/components/payments/payment-buttons';
 
@@ -272,13 +272,35 @@ export default async function AppointmentDetailPage({
               <p className="text-sm text-red-700">Le paiement a échoué.</p>
             </div>
             {appointment.status === 'scheduled' && (
-              <PaymentButtons appointmentId={id} />
+              <PaymentButtons 
+                cardAction={async (prevState, formData) => {
+                  'use server';
+                  const result = await initiateCardPaymentAction(id);
+                  return result as any;
+                }}
+                cashAction={async (prevState, formData) => {
+                  'use server';
+                  const result = await recordCashPaymentAction(id);
+                  return result as any;
+                }}
+              />
             )}
           </div>
         ) : (
           /* Pas encore de paiement */
           appointment.status === 'scheduled' ? (
-            <PaymentButtons appointmentId={id} />
+            <PaymentButtons 
+              cardAction={async (prevState, formData) => {
+                'use server';
+                const result = await initiateCardPaymentAction(id);
+                return result as any;
+              }}
+              cashAction={async (prevState, formData) => {
+                'use server';
+                const result = await recordCashPaymentAction(id);
+                return result as any;
+              }}
+            />
           ) : appointment.status === 'cancelled' ? (
             <p className="mt-3 text-sm text-secondary">RDV annulé — aucun paiement.</p>
           ) : null

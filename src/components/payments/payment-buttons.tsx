@@ -1,7 +1,6 @@
 'use client';
 
 import { useFormState, useFormStatus } from 'react-dom';
-import { initiateCardPaymentAction, recordCashPaymentAction } from '@/actions/payments';
 
 type PaymentState = {
   error?: string;
@@ -28,22 +27,15 @@ function SubmitButton({ children, variant = 'primary' }: { children: React.React
   );
 }
 
-export function PaymentButtons({ appointmentId }: { appointmentId: string }) {
-  const [cardState, cardAction] = useFormState<PaymentState, FormData>(
-    async (_prevState, _formData) => {
-      const result = await initiateCardPaymentAction(appointmentId);
-      return result as PaymentState;
-    },
-    {}
-  );
-
-  const [cashState, cashAction] = useFormState<PaymentState, FormData>(
-    async (_prevState, _formData) => {
-      const result = await recordCashPaymentAction(appointmentId);
-      return result as PaymentState;
-    },
-    {}
-  );
+export function PaymentButtons({ 
+  cardAction, 
+  cashAction 
+}: { 
+  cardAction: (prevState: PaymentState, formData: FormData) => Promise<PaymentState>;
+  cashAction: (prevState: PaymentState, formData: FormData) => Promise<PaymentState>;
+}) {
+  const [cardState, cardFormAction] = useFormState<PaymentState, FormData>(cardAction, {});
+  const [cashState, cashFormAction] = useFormState<PaymentState, FormData>(cashAction, {});
 
   return (
     <div className="mt-3 space-y-3">
@@ -70,13 +62,13 @@ export function PaymentButtons({ appointmentId }: { appointmentId: string }) {
       )}
 
       <div className="flex flex-wrap gap-2">
-        <form action={cardAction}>
+        <form action={cardFormAction}>
           <SubmitButton variant="primary">
             Payer par carte (SumUp)
           </SubmitButton>
         </form>
         
-        <form action={cashAction}>
+        <form action={cashFormAction}>
           <SubmitButton variant="secondary">
             Payer en espèces
           </SubmitButton>
