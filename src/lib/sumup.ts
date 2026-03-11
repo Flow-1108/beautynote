@@ -65,6 +65,12 @@ export async function createCheckout(
     description,
   };
 
+  console.log('[SumUp] Creating checkout:', {
+    reference: checkoutReference,
+    amount: amountEuros,
+    merchant: getMerchantCode(),
+  });
+
   const response = await fetch(`${SUMUP_BASE_URL}/checkouts`, {
     method: 'POST',
     headers: {
@@ -76,10 +82,17 @@ export async function createCheckout(
 
   if (!response.ok) {
     const errorBody = await response.text();
+    console.error('[SumUp] createCheckout failed:', {
+      status: response.status,
+      statusText: response.statusText,
+      error: errorBody,
+    });
     throw new Error(`SumUp createCheckout failed (${response.status}): ${errorBody}`);
   }
 
-  return response.json();
+  const result = await response.json();
+  console.log('[SumUp] Checkout created:', result.id);
+  return result;
 }
 
 /**
@@ -87,6 +100,8 @@ export async function createCheckout(
  * Le terminal affichera le montant et attendra le paiement par carte.
  */
 export async function processCheckout(checkoutId: string): Promise<SumUpCheckout> {
+  console.log('[SumUp] Processing checkout on terminal:', checkoutId);
+
   const response = await fetch(`${SUMUP_BASE_URL}/checkouts/${checkoutId}`, {
     method: 'PUT',
     headers: {
@@ -100,10 +115,18 @@ export async function processCheckout(checkoutId: string): Promise<SumUpCheckout
 
   if (!response.ok) {
     const errorBody = await response.text();
+    console.error('[SumUp] processCheckout failed:', {
+      checkoutId,
+      status: response.status,
+      statusText: response.statusText,
+      error: errorBody,
+    });
     throw new Error(`SumUp processCheckout failed (${response.status}): ${errorBody}`);
   }
 
-  return response.json();
+  const result = await response.json();
+  console.log('[SumUp] Checkout sent to terminal:', result.status);
+  return result;
 }
 
 /**
@@ -111,6 +134,8 @@ export async function processCheckout(checkoutId: string): Promise<SumUpCheckout
  * Utilisé pour vérifier si le paiement a abouti.
  */
 export async function getCheckoutStatus(checkoutId: string): Promise<SumUpCheckout> {
+  console.log('[SumUp] Checking status for:', checkoutId);
+
   const response = await fetch(`${SUMUP_BASE_URL}/checkouts/${checkoutId}`, {
     method: 'GET',
     headers: {
@@ -120,8 +145,16 @@ export async function getCheckoutStatus(checkoutId: string): Promise<SumUpChecko
 
   if (!response.ok) {
     const errorBody = await response.text();
+    console.error('[SumUp] getCheckoutStatus failed:', {
+      checkoutId,
+      status: response.status,
+      statusText: response.statusText,
+      error: errorBody,
+    });
     throw new Error(`SumUp getCheckoutStatus failed (${response.status}): ${errorBody}`);
   }
 
-  return response.json();
+  const result = await response.json();
+  console.log('[SumUp] Status:', result.status);
+  return result;
 }

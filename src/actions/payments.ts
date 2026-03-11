@@ -49,6 +49,8 @@ export async function initiateCardPaymentAction(appointmentId: string) {
   const checkoutRef = `BN-${appointmentId.slice(0, 8)}-${Date.now()}`;
 
   try {
+    console.log('[Payment] Initiating card payment for appointment:', appointmentId, 'Amount:', amountEuros, '€');
+    
     // 1. Créer le checkout SumUp
     const checkout = await createCheckout(
       checkoutRef,
@@ -56,8 +58,12 @@ export async function initiateCardPaymentAction(appointmentId: string) {
       `BeautyNote — RDV ${appointmentId.slice(0, 8)}`,
     );
 
+    console.log('[Payment] Checkout created, sending to terminal...');
+
     // 2. Envoyer au terminal
     await processCheckout(checkout.id);
+
+    console.log('[Payment] Checkout sent to terminal, saving to database...');
 
     // 3. Enregistrer en BDD
     const { error: insertErr } = await supabase.from('payments').insert({
@@ -68,15 +74,36 @@ export async function initiateCardPaymentAction(appointmentId: string) {
       sumup_checkout_id: checkout.id,
     });
 
-    if (insertErr) return { error: insertErr.message };
+    if (insertErr) {
+      console.error('[Payment] Database insert failed:', insertErr);
+      return { error: `Erreur base de données : ${insertErr.message}` };
+    }
+
+    console.log('[Payment] Payment initiated successfully');
 
     revalidatePath(`/calendrier/${appointmentId}`);
     revalidatePath('/paiements');
 
     return { success: true, checkoutId: checkout.id };
   } catch (err) {
+    console.error('[Payment] Card payment failed:', err);
     const message = err instanceof Error ? err.message : 'Erreur SumUp inconnue';
-    return { error: message };
+    
+    // Extraire un message d'erreur plus clair pour l'utilisateur
+    let userMessage = message;
+    if (message.includes('401')) {
+      userMessage = 'Erreur d\'authentification SumUp. Vérifiez la clé API.';
+    } else if (message.includes('403')) {
+      userMessage = 'Accès refusé par SumUp. Vérifiez les permissions de la clé API.';
+    } else if (message.includes('404')) {
+      userMessage = 'Terminal SumUp introuvable. Vérifiez le code marchand.';
+    } else if (message.includes('500') || message.includes('502') || message.includes('503')) {
+      userMessage = 'Serveur SumUp temporairement indisponible. Réessayez dans quelques instants.';
+    } else if (message.includes('network') || message.includes('fetch')) {
+      userMessage = 'Erreur de connexion. Vérifiez votre connexion Internet.';
+    }
+    
+    return { error: userMessage, details: message };
   }
 }
 
