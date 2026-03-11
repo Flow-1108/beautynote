@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getAppointmentById, completeAppointmentAction, cancelAppointmentAction } from '@/actions/appointments';
-import { getPaymentByAppointment, initiateCardPaymentAction, recordCashPaymentAction, checkPaymentStatusAction } from '@/actions/payments';
+import { getPaymentByAppointment, checkPaymentStatusAction } from '@/actions/payments';
 import { formatCents, formatDate, formatTime } from '@/lib/utils';
+import { PaymentButtons } from '@/components/payments/payment-buttons';
 
 export default async function AppointmentDetailPage({
   params,
@@ -287,35 +288,3 @@ export default async function AppointmentDetailPage({
   );
 }
 
-function PaymentButtons({ appointmentId }: { appointmentId: string }) {
-  const cardAction = async () => {
-    'use server';
-    await initiateCardPaymentAction(appointmentId);
-  };
-
-  const cashAction = async () => {
-    'use server';
-    await recordCashPaymentAction(appointmentId);
-  };
-
-  return (
-    <div className="mt-3 flex flex-wrap gap-2">
-      <form action={cardAction}>
-        <button
-          type="submit"
-          className="rounded-md bg-prune px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-prune-light"
-        >
-          Payer par carte (SumUp)
-        </button>
-      </form>
-      <form action={cashAction}>
-        <button
-          type="submit"
-          className="rounded-md bg-surface px-4 py-2 text-sm font-medium text-prune shadow-sm ring-1 ring-border hover:bg-surface-muted"
-        >
-          Payer en espèces
-        </button>
-      </form>
-    </div>
-  );
-}
