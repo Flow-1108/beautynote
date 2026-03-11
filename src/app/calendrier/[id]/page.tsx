@@ -3,7 +3,6 @@ import { notFound } from 'next/navigation';
 import { getAppointmentById, completeAppointmentAction, cancelAppointmentAction } from '@/actions/appointments';
 import { getPaymentByAppointment, checkPaymentStatusAction, initiateCardPaymentAction, recordCashPaymentAction } from '@/actions/payments';
 import { formatCents, formatDate, formatTime } from '@/lib/utils';
-import { PaymentButtons } from '@/components/payments/payment-buttons';
 
 export default async function AppointmentDetailPage({
   params,
@@ -272,35 +271,59 @@ export default async function AppointmentDetailPage({
               <p className="text-sm text-red-700">Le paiement a échoué.</p>
             </div>
             {appointment.status === 'scheduled' && (
-              <PaymentButtons 
-                cardAction={async (prevState, formData) => {
+              <div className="mt-3 flex flex-wrap gap-2">
+                <form action={async () => {
                   'use server';
-                  const result = await initiateCardPaymentAction(id);
-                  return result as any;
-                }}
-                cashAction={async (prevState, formData) => {
+                  await initiateCardPaymentAction(id);
+                }}>
+                  <button
+                    type="submit"
+                    className="rounded-md bg-prune px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-prune-light"
+                  >
+                    Payer par carte (SumUp)
+                  </button>
+                </form>
+                <form action={async () => {
                   'use server';
-                  const result = await recordCashPaymentAction(id);
-                  return result as any;
-                }}
-              />
+                  await recordCashPaymentAction(id);
+                }}>
+                  <button
+                    type="submit"
+                    className="rounded-md bg-surface px-4 py-2 text-sm font-medium text-prune shadow-sm ring-1 ring-border hover:bg-surface-muted"
+                  >
+                    Payer en espèces
+                  </button>
+                </form>
+              </div>
             )}
           </div>
         ) : (
           /* Pas encore de paiement */
           appointment.status === 'scheduled' ? (
-            <PaymentButtons 
-              cardAction={async (prevState, formData) => {
+            <div className="mt-3 flex flex-wrap gap-2">
+              <form action={async () => {
                 'use server';
-                const result = await initiateCardPaymentAction(id);
-                return result as any;
-              }}
-              cashAction={async (prevState, formData) => {
+                await initiateCardPaymentAction(id);
+              }}>
+                <button
+                  type="submit"
+                  className="rounded-md bg-prune px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-prune-light"
+                >
+                  Payer par carte (SumUp)
+                </button>
+              </form>
+              <form action={async () => {
                 'use server';
-                const result = await recordCashPaymentAction(id);
-                return result as any;
-              }}
-            />
+                await recordCashPaymentAction(id);
+              }}>
+                <button
+                  type="submit"
+                  className="rounded-md bg-surface px-4 py-2 text-sm font-medium text-prune shadow-sm ring-1 ring-border hover:bg-surface-muted"
+                >
+                  Payer en espèces
+                </button>
+              </form>
+            </div>
           ) : appointment.status === 'cancelled' ? (
             <p className="mt-3 text-sm text-secondary">RDV annulé — aucun paiement.</p>
           ) : null
