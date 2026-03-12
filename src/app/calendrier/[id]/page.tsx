@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getAppointmentById, completeAppointmentAction, cancelAppointmentAction } from '@/actions/appointments';
-import { getPaymentByAppointment, checkPaymentStatusAction, initiateCardPaymentAction, recordCashPaymentAction } from '@/actions/payments';
+import { getPaymentByAppointment, recordCashPaymentAction } from '@/actions/payments';
 import { formatCents, formatDate, formatTime } from '@/lib/utils';
+import { SumUpPaymentButton } from '@/components/payments/payment-buttons';
 
 export default async function AppointmentDetailPage({
   params,
@@ -248,22 +249,25 @@ export default async function AppointmentDetailPage({
           <div className="mt-3 space-y-3">
             <div className="rounded-md bg-yellow-50 p-3">
               <p className="text-sm font-medium text-yellow-700">
-                Paiement en attente sur le terminal SumUp…
+                Paiement en attente — finalisez sur le terminal SumUp.
               </p>
             </div>
-            <form
-              action={async () => {
-                'use server';
-                await checkPaymentStatusAction(id);
-              }}
-            >
-              <button
-                type="submit"
-                className="rounded-md bg-surface px-3 py-2 text-sm font-medium text-prune shadow-sm ring-1 ring-border hover:bg-surface-muted"
-              >
-                Vérifier le statut
-              </button>
-            </form>
+            {appointment.status === 'scheduled' && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                <SumUpPaymentButton appointmentId={id} />
+                <form action={async () => {
+                  'use server';
+                  await recordCashPaymentAction(id);
+                }}>
+                  <button
+                    type="submit"
+                    className="rounded-md bg-surface px-4 py-2 text-sm font-medium text-prune shadow-sm ring-1 ring-border hover:bg-surface-muted"
+                  >
+                    Payer en espèces
+                  </button>
+                </form>
+              </div>
+            )}
           </div>
         ) : payment?.status === 'failed' ? (
           <div className="mt-3 space-y-3">
@@ -272,17 +276,7 @@ export default async function AppointmentDetailPage({
             </div>
             {appointment.status === 'scheduled' && (
               <div className="mt-3 flex flex-wrap gap-2">
-                <form action={async () => {
-                  'use server';
-                  await initiateCardPaymentAction(id);
-                }}>
-                  <button
-                    type="submit"
-                    className="rounded-md bg-prune px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-prune-light"
-                  >
-                    Payer par carte (SumUp)
-                  </button>
-                </form>
+                <SumUpPaymentButton appointmentId={id} />
                 <form action={async () => {
                   'use server';
                   await recordCashPaymentAction(id);
@@ -301,17 +295,7 @@ export default async function AppointmentDetailPage({
           /* Pas encore de paiement */
           appointment.status === 'scheduled' ? (
             <div className="mt-3 flex flex-wrap gap-2">
-              <form action={async () => {
-                'use server';
-                await initiateCardPaymentAction(id);
-              }}>
-                <button
-                  type="submit"
-                  className="rounded-md bg-prune px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-prune-light"
-                >
-                  Payer par carte (SumUp)
-                </button>
-              </form>
+              <SumUpPaymentButton appointmentId={id} />
               <form action={async () => {
                 'use server';
                 await recordCashPaymentAction(id);

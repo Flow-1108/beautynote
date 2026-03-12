@@ -1,160 +1,56 @@
 // ============================================================
-// BeautyNote — SumUp Cloud API Helper
+// BeautyNote — SumUp Payment API Switch (URL Scheme)
 // ============================================================
-// Communication server-to-server avec l'API SumUp.
-// Aucune donnée de paiement ne transite côté client.
-// Documentation : https://developer.sumup.com/api
+// Intégration via le URL scheme iOS « sumupmerchant:// »
+// pour les terminaux SumUp Air (Bluetooth).
+//
+// Flux :
+//   1. L'app crée un paiement "pending" en BDD
+//   2. L'utilisatrice est redirigée vers l'app SumUp via URL scheme
+//   3. L'app SumUp gère le paiement via Bluetooth avec le terminal Air
+//   4. Après paiement, SumUp redirige vers notre callback URL
+//   5. Le callback met à jour le statut du paiement en BDD
+//
+// Documentation :
+//   https://developer.sumup.com/docs/terminal-payments
+//   https://github.com/sumup/sumup-ios-url-scheme
 // ============================================================
 
-const SUMUP_BASE_URL = 'https://api.sumup.com/v0.1';
-
-function getApiKey(): string {
-  const key = process.env.SUMUP_API_KEY;
-  if (!key) throw new Error('SUMUP_API_KEY manquante dans les variables d\'environnement.');
-  return key;
-}
-
-function getMerchantCode(): string {
-  const code = process.env.SUMUP_MERCHANT_CODE;
-  if (!code) throw new Error('SUMUP_MERCHANT_CODE manquant dans les variables d\'environnement.');
-  return code;
-}
-
-// --- Types SumUp ---
-
-export type SumUpCheckoutStatus =
-  | 'PENDING'
-  | 'PAID'
-  | 'FAILED'
-  | 'EXPIRED';
-
-export type SumUpCheckout = {
-  id: string;
-  checkout_reference: string;
-  amount: number;
-  currency: string;
-  status: SumUpCheckoutStatus;
-  transaction_id?: string;
-  date?: string;
-};
-
-type CreateCheckoutPayload = {
-  checkout_reference: string;
-  amount: number;
-  currency: string;
-  merchant_code: string;
-  description: string;
-};
-
-// --- API calls ---
-
 /**
- * Crée un checkout SumUp et retourne l'objet checkout.
- * Le checkout sera ensuite envoyé au terminal via processCheckout().
+ * Construit l'URL SumUp pour ouvrir l'app SumUp et déclencher un paiement.
+ * Utilise le URL scheme iOS : sumupmerchant://pay/1.0
  */
-export async function createCheckout(
-  checkoutReference: string,
-  amountEuros: number,
-  description: string,
-): Promise<SumUpCheckout> {
-  const payload: CreateCheckoutPayload = {
-    checkout_reference: checkoutReference,
-    amount: amountEuros,
-    currency: 'EUR',
-    merchant_code: getMerchantCode(),
-    description,
-  };
+export function buildSumUpPaymentUrl(params: {
+  amount: number;       // Montant en euros (ex: 45.00)
+  currency?: string;    // Devise (défaut: EUR)
+  title?: string;       // Description affichée dans SumUp
+  foreignTxId: string;  // Identifiant unique côté BeautyNote
+  affiliateKey: string; // Clé d'affiliation SumUp
+  callbackSuccess: string; // URL de retour en cas de succès
+  callbackFail: string;    // URL de retour en cas d'échec
+}): string {
+  const {
+    amount,
+    currency = 'EUR',
+    title,
+    foreignTxId,
+    affiliateKey,
+    callbackSuccess,
+    callbackFail,
+  } = params;
 
-  console.log('[SumUp] Creating checkout:', {
-    reference: checkoutReference,
-    amount: amountEuros,
-    merchant: getMerchantCode(),
-  });
+  const url = new URL('sumupmerchant://pay/1.0');
+  url.searchParams.set('amount', amount.toFixed(2));
+  url.searchParams.set('currency', currency);
+  url.searchParams.set('affiliate-key', affiliateKey);
+  url.searchParams.set('foreign-tx-id', foreignTxId);
+  url.searchParams.set('callbacksuccess', callbackSuccess);
+  url.searchParams.set('callbackfail', callbackFail);
+  url.searchParams.set('skip-screen-success', 'true');
 
-  const response = await fetch(`${SUMUP_BASE_URL}/checkouts`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${getApiKey()}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.text();
-    console.error('[SumUp] createCheckout failed:', {
-      status: response.status,
-      statusText: response.statusText,
-      error: errorBody,
-    });
-    throw new Error(`SumUp createCheckout failed (${response.status}): ${errorBody}`);
+  if (title) {
+    url.searchParams.set('title', title);
   }
 
-  const result = await response.json();
-  console.log('[SumUp] Checkout created:', result.id);
-  return result;
-}
-
-/**
- * Envoie le checkout vers le terminal SumUp physique.
- * Le terminal affichera le montant et attendra le paiement par carte.
- */
-export async function processCheckout(checkoutId: string): Promise<SumUpCheckout> {
-  console.log('[SumUp] Processing checkout on terminal:', checkoutId);
-
-  const response = await fetch(`${SUMUP_BASE_URL}/checkouts/${checkoutId}`, {
-    method: 'PUT',
-    headers: {
-      'Authorization': `Bearer ${getApiKey()}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      payment_type: 'card',
-    }),
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.text();
-    console.error('[SumUp] processCheckout failed:', {
-      checkoutId,
-      status: response.status,
-      statusText: response.statusText,
-      error: errorBody,
-    });
-    throw new Error(`SumUp processCheckout failed (${response.status}): ${errorBody}`);
-  }
-
-  const result = await response.json();
-  console.log('[SumUp] Checkout sent to terminal:', result.status);
-  return result;
-}
-
-/**
- * Récupère le statut actuel d'un checkout.
- * Utilisé pour vérifier si le paiement a abouti.
- */
-export async function getCheckoutStatus(checkoutId: string): Promise<SumUpCheckout> {
-  console.log('[SumUp] Checking status for:', checkoutId);
-
-  const response = await fetch(`${SUMUP_BASE_URL}/checkouts/${checkoutId}`, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${getApiKey()}`,
-    },
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.text();
-    console.error('[SumUp] getCheckoutStatus failed:', {
-      checkoutId,
-      status: response.status,
-      statusText: response.statusText,
-      error: errorBody,
-    });
-    throw new Error(`SumUp getCheckoutStatus failed (${response.status}): ${errorBody}`);
-  }
-
-  const result = await response.json();
-  console.log('[SumUp] Status:', result.status);
-  return result;
+  return url.toString();
 }

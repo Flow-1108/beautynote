@@ -2,21 +2,20 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
-import { createCheckout, processCheckout, getCheckoutStatus } from '@/lib/sumup';
 import { awardLoyaltyPoints } from './pricing';
 import { completeAppointmentAction } from './appointments';
 
 // ============================================================
-// INITIER UN PAIEMENT PAR CARTE (SumUp Cloud API)
+// PRÉPARER UN PAIEMENT PAR CARTE (SumUp URL Scheme)
 // ============================================================
 // Flux :
-//   1. Créer un checkout SumUp (server-to-server)
-//   2. Envoyer le checkout au terminal physique
-//   3. Enregistrer le payment en statut 'pending' en BDD
-//   4. L'utilisatrice finalise sur le terminal
-//   5. checkPaymentStatus() vérifie le résultat
+//   1. Créer un payment 'pending' en BDD
+//   2. Retourner les infos nécessaires pour construire l'URL SumUp
+//   3. Le client (navigateur) redirige vers l'app SumUp
+//   4. Après paiement, SumUp redirige vers /sumup-callback
+//   5. Le callback met à jour le statut en BDD
 
-export async function initiateCardPaymentAction(appointmentId: string) {
+export async function prepareCardPaymentAction(appointmentId: string) {
   const supabase = await createClient();
 
   // Charger le RDV
@@ -46,139 +45,97 @@ export async function initiateCardPaymentAction(appointmentId: string) {
   }
 
   const amountEuros = amountCents / 100;
-  const checkoutRef = `BN-${appointmentId.slice(0, 8)}-${Date.now()}`;
+  const foreignTxId = `BN-${appointmentId.slice(0, 8)}-${Date.now()}`;
 
-  try {
-    console.log('[Payment] Initiating card payment for appointment:', appointmentId, 'Amount:', amountEuros, '€');
-    
-    // 1. Créer le checkout SumUp
-    const checkout = await createCheckout(
-      checkoutRef,
-      amountEuros,
-      `BeautyNote — RDV ${appointmentId.slice(0, 8)}`,
-    );
+  // Annuler un éventuel paiement pending précédent
+  await supabase
+    .from('payments')
+    .update({ status: 'cancelled' as const })
+    .eq('appointment_id', appointmentId)
+    .eq('status', 'pending');
 
-    console.log('[Payment] Checkout created, sending to terminal...');
+  // Créer le paiement en BDD avec statut pending
+  const { error: insertErr } = await supabase.from('payments').insert({
+    appointment_id: appointmentId,
+    amount_cents: amountCents,
+    method: 'card_sumup' as const,
+    status: 'pending' as const,
+    sumup_checkout_id: foreignTxId,
+  });
 
-    // 2. Envoyer au terminal
-    await processCheckout(checkout.id);
+  if (insertErr) return { error: `Erreur base de données : ${insertErr.message}` };
 
-    console.log('[Payment] Checkout sent to terminal, saving to database...');
+  revalidatePath(`/calendrier/${appointmentId}`);
 
-    // 3. Enregistrer en BDD
-    const { error: insertErr } = await supabase.from('payments').insert({
-      appointment_id: appointmentId,
-      amount_cents: amountCents,
-      method: 'card_sumup' as const,
-      status: 'pending' as const,
-      sumup_checkout_id: checkout.id,
-    });
-
-    if (insertErr) {
-      console.error('[Payment] Database insert failed:', insertErr);
-      return { error: `Erreur base de données : ${insertErr.message}` };
-    }
-
-    console.log('[Payment] Payment initiated successfully');
-
-    revalidatePath(`/calendrier/${appointmentId}`);
-    revalidatePath('/paiements');
-
-    return { success: true, checkoutId: checkout.id };
-  } catch (err) {
-    console.error('[Payment] Card payment failed:', err);
-    const message = err instanceof Error ? err.message : 'Erreur SumUp inconnue';
-    
-    // Extraire un message d'erreur plus clair pour l'utilisateur
-    let userMessage = message;
-    if (message.includes('401')) {
-      userMessage = 'Erreur d\'authentification SumUp. Vérifiez la clé API.';
-    } else if (message.includes('403')) {
-      userMessage = 'Accès refusé par SumUp. Vérifiez les permissions de la clé API.';
-    } else if (message.includes('404')) {
-      userMessage = 'Terminal SumUp introuvable. Vérifiez le code marchand.';
-    } else if (message.includes('500') || message.includes('502') || message.includes('503')) {
-      userMessage = 'Serveur SumUp temporairement indisponible. Réessayez dans quelques instants.';
-    } else if (message.includes('network') || message.includes('fetch')) {
-      userMessage = 'Erreur de connexion. Vérifiez votre connexion Internet.';
-    }
-    
-    return { error: userMessage, details: message };
-  }
+  return {
+    success: true,
+    amountEuros,
+    foreignTxId,
+    appointmentId,
+  };
 }
 
 // ============================================================
-// VÉRIFIER LE STATUT DU PAIEMENT (polling)
+// CALLBACK SumUp — Traiter le retour de l'app SumUp
 // ============================================================
 
-export async function checkPaymentStatusAction(appointmentId: string) {
+export async function handleSumUpCallbackAction(params: {
+  foreignTxId: string;
+  success: boolean;
+  txCode?: string;
+}) {
   const supabase = await createClient();
 
-  // Trouver le paiement pending pour ce RDV
+  const { foreignTxId, success, txCode } = params;
+
+  // Trouver le paiement par le foreign-tx-id (stocké dans sumup_checkout_id)
   const { data: payment, error: payErr } = await supabase
     .from('payments')
-    .select('id, sumup_checkout_id, status, amount_cents')
-    .eq('appointment_id', appointmentId)
+    .select('id, appointment_id, amount_cents, status')
+    .eq('sumup_checkout_id', foreignTxId)
     .eq('status', 'pending')
-    .order('created_at', { ascending: false })
-    .limit(1)
     .maybeSingle();
 
-  if (payErr) return { error: payErr.message };
-  if (!payment) return { error: 'Aucun paiement en attente pour ce RDV.' };
-  if (!payment.sumup_checkout_id) return { error: 'Pas de référence SumUp.' };
-
-  try {
-    const checkout = await getCheckoutStatus(payment.sumup_checkout_id);
-
-    if (checkout.status === 'PAID') {
-      // Paiement réussi → mettre à jour
-      await supabase
-        .from('payments')
-        .update({
-          status: 'success' as const,
-          sumup_transaction_id: checkout.transaction_id ?? null,
-        })
-        .eq('id', payment.id);
-
-      // Marquer le RDV comme terminé
-      await completeAppointmentAction(appointmentId);
-
-      // Attribuer les points de fidélité
-      const { data: apt } = await supabase
-        .from('appointments')
-        .select('client_id, final_price_cents')
-        .eq('id', appointmentId)
-        .single();
-
-      if (apt) {
-        await awardLoyaltyPoints(apt.client_id, appointmentId, apt.final_price_cents);
-      }
-
-      revalidatePath(`/calendrier/${appointmentId}`);
-      revalidatePath('/paiements');
-
-      return { status: 'success' as const };
-    }
-
-    if (checkout.status === 'FAILED' || checkout.status === 'EXPIRED') {
-      await supabase
-        .from('payments')
-        .update({ status: 'failed' as const })
-        .eq('id', payment.id);
-
-      revalidatePath(`/calendrier/${appointmentId}`);
-      revalidatePath('/paiements');
-
-      return { status: 'failed' as const, message: `Paiement ${checkout.status.toLowerCase()}.` };
-    }
-
-    // Toujours en attente
-    return { status: 'pending' as const };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erreur vérification SumUp';
-    return { error: message };
+  if (payErr || !payment) {
+    console.error('[SumUp Callback] Payment not found:', foreignTxId, payErr);
+    return { error: 'Paiement introuvable.' };
   }
+
+  if (success) {
+    // Paiement réussi
+    await supabase
+      .from('payments')
+      .update({
+        status: 'success' as const,
+        sumup_transaction_id: txCode ?? null,
+      })
+      .eq('id', payment.id);
+
+    // Marquer le RDV comme terminé
+    await completeAppointmentAction(payment.appointment_id);
+
+    // Attribuer les points de fidélité
+    const { data: apt } = await supabase
+      .from('appointments')
+      .select('client_id, final_price_cents')
+      .eq('id', payment.appointment_id)
+      .single();
+
+    if (apt) {
+      await awardLoyaltyPoints(apt.client_id, payment.appointment_id, apt.final_price_cents);
+    }
+  } else {
+    // Paiement échoué
+    await supabase
+      .from('payments')
+      .update({ status: 'failed' as const })
+      .eq('id', payment.id);
+  }
+
+  revalidatePath(`/calendrier/${payment.appointment_id}`);
+  revalidatePath('/paiements');
+
+  return { success: true, appointmentId: payment.appointment_id };
 }
 
 // ============================================================
