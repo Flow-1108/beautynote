@@ -5,6 +5,10 @@ import { getPaymentByAppointment, recordCashPaymentAction } from '@/actions/paym
 import { formatCents, formatDate, formatTime } from '@/lib/utils';
 import { SumUpPaymentButton } from '@/components/payments/payment-buttons';
 
+// Désactiver le cache pour toujours avoir les données fraîches
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 function PaymentButtons({ appointmentId, amountFormatted }: { appointmentId: string; amountFormatted: string }) {
   return (
     <div className="mt-3 flex flex-wrap gap-2 items-start">

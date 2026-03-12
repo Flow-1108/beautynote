@@ -4,6 +4,10 @@ import { DayView } from '@/components/calendrier/day-view';
 import { WeekView } from '@/components/calendrier/week-view';
 import { MonthView } from '@/components/calendrier/month-view';
 
+// Désactiver le cache pour toujours avoir les données fraîches
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 type CalendarView = 'day' | 'week' | 'month';
 
 export default async function CalendrierPage({
@@ -12,7 +16,7 @@ export default async function CalendrierPage({
   searchParams: Promise<{ date?: string; view?: string; year?: string; month?: string }>;
 }) {
   const params = await searchParams;
-  const view: CalendarView = (['day', 'week', 'month'].includes(params.view ?? '') ? params.view : 'day') as CalendarView;
+  const view: CalendarView = (['day', 'week', 'month'].includes(params.view ?? '') ? params.view : 'month') as CalendarView;
   const today = new Date();
   const selectedDate = params.date ?? today.toISOString().slice(0, 10);
   const selectedYear = params.year ? parseInt(params.year, 10) : today.getFullYear();
