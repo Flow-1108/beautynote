@@ -76,69 +76,6 @@ export async function prepareCardPaymentAction(appointmentId: string) {
 }
 
 // ============================================================
-// CALLBACK SumUp — Traiter le retour de l'app SumUp
-// ============================================================
-
-export async function handleSumUpCallbackAction(params: {
-  foreignTxId: string;
-  success: boolean;
-  txCode?: string;
-}) {
-  const supabase = await createClient();
-
-  const { foreignTxId, success, txCode } = params;
-
-  // Trouver le paiement par le foreign-tx-id (stocké dans sumup_checkout_id)
-  const { data: payment, error: payErr } = await supabase
-    .from('payments')
-    .select('id, appointment_id, amount_cents, status')
-    .eq('sumup_checkout_id', foreignTxId)
-    .eq('status', 'pending')
-    .maybeSingle();
-
-  if (payErr || !payment) {
-    console.error('[SumUp Callback] Payment not found:', foreignTxId, payErr);
-    return { error: 'Paiement introuvable.' };
-  }
-
-  if (success) {
-    // Paiement réussi
-    await supabase
-      .from('payments')
-      .update({
-        status: 'success' as const,
-        sumup_transaction_id: txCode ?? null,
-      })
-      .eq('id', payment.id);
-
-    // Marquer le RDV comme terminé
-    await completeAppointmentAction(payment.appointment_id);
-
-    // Attribuer les points de fidélité
-    const { data: apt } = await supabase
-      .from('appointments')
-      .select('client_id, final_price_cents')
-      .eq('id', payment.appointment_id)
-      .single();
-
-    if (apt) {
-      await awardLoyaltyPoints(apt.client_id, payment.appointment_id, apt.final_price_cents);
-    }
-  } else {
-    // Paiement échoué
-    await supabase
-      .from('payments')
-      .update({ status: 'failed' as const })
-      .eq('id', payment.id);
-  }
-
-  revalidatePath(`/calendrier/${payment.appointment_id}`);
-  revalidatePath('/paiements');
-
-  return { success: true, appointmentId: payment.appointment_id };
-}
-
-// ============================================================
 // PAIEMENT EN ESPÈCES
 // ============================================================
 
