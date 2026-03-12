@@ -57,10 +57,15 @@ export function SumUpPaymentButton({
           Montant à encaisser : {amountFormatted}
         </p>
         <ol className="mt-2 space-y-1 text-sm text-blue-700">
-          <li>1. Ouvrez l&apos;app <strong>SumUp</strong> sur l&apos;iPad</li>
-          <li>2. Saisissez <strong>{amountFormatted}</strong> et encaissez</li>
-          <li>3. Une fois le paiement réussi, confirmez ci-dessous</li>
+          <li>1. Ouvrez SumUp, saisissez <strong>{amountFormatted}</strong> et encaissez</li>
+          <li>2. Une fois le paiement réussi, confirmez ci-dessous</li>
         </ol>
+        <a
+          href="sumupmerchant://pay/1.0"
+          className="mt-3 inline-block rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
+        >
+          Ouvrir SumUp
+        </a>
       </div>
 
       {error && (
@@ -76,7 +81,7 @@ export function SumUpPaymentButton({
           disabled={step === 'confirming'}
           className="rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {step === 'confirming' ? 'Enregistrement…' : '✓ Paiement effectué'}
+          {step === 'confirming' ? 'Enregistrement…' : 'Paiement effectué'}
         </button>
         <button
           type="button"
