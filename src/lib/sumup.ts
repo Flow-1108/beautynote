@@ -19,6 +19,9 @@
 /**
  * Construit l'URL SumUp pour ouvrir l'app SumUp et déclencher un paiement.
  * Utilise le URL scheme iOS : sumupmerchant://pay/1.0
+ *
+ * On construit l'URL manuellement (pas via new URL()) car les URL schemes
+ * personnalisés + searchParams peuvent causer des problèmes d'encodage.
  */
 export function buildSumUpPaymentUrl(params: {
   amount: number;       // Montant en euros (ex: 45.00)
@@ -39,18 +42,20 @@ export function buildSumUpPaymentUrl(params: {
     callbackFail,
   } = params;
 
-  const url = new URL('sumupmerchant://pay/1.0');
-  url.searchParams.set('amount', amount.toFixed(2));
-  url.searchParams.set('currency', currency);
-  url.searchParams.set('affiliate-key', affiliateKey);
-  url.searchParams.set('foreign-tx-id', foreignTxId);
-  url.searchParams.set('callbacksuccess', callbackSuccess);
-  url.searchParams.set('callbackfail', callbackFail);
-  url.searchParams.set('skip-screen-success', 'true');
+  const e = encodeURIComponent;
+
+  const queryParts = [
+    `amount=${e(amount.toFixed(2))}`,
+    `currency=${e(currency)}`,
+    `affiliate-key=${e(affiliateKey)}`,
+    `foreign-tx-id=${e(foreignTxId)}`,
+    `callbacksuccess=${e(callbackSuccess)}`,
+    `callbackfail=${e(callbackFail)}`,
+  ];
 
   if (title) {
-    url.searchParams.set('title', title);
+    queryParts.push(`title=${e(title)}`);
   }
 
-  return url.toString();
+  return `sumupmerchant://pay/1.0?${queryParts.join('&')}`;
 }
