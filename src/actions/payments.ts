@@ -6,16 +6,14 @@ import { awardLoyaltyPoints } from './pricing';
 import { completeAppointmentAction } from './appointments';
 
 // ============================================================
-// PRÉPARER UN PAIEMENT PAR CARTE (SumUp URL Scheme)
+// PAIEMENT PAR CARTE (SumUp — confirmation manuelle)
 // ============================================================
 // Flux :
-//   1. Créer un payment 'pending' en BDD
-//   2. Retourner les infos nécessaires pour construire l'URL SumUp
-//   3. Le client (navigateur) redirige vers l'app SumUp
-//   4. Après paiement, SumUp redirige vers /sumup-callback
-//   5. Le callback met à jour le statut en BDD
+//   1. L'utilisatrice voit le montant à encaisser
+//   2. Elle effectue le paiement dans l'app SumUp manuellement
+//   3. Elle confirme dans BeautyNote → paiement enregistré
 
-export async function prepareCardPaymentAction(appointmentId: string) {
+export async function confirmCardPaymentAction(appointmentId: string) {
   const supabase = await createClient();
 
   // Charger le RDV
@@ -44,35 +42,30 @@ export async function prepareCardPaymentAction(appointmentId: string) {
     return handleFreePayment(appointmentId, appointment.client_id);
   }
 
-  const amountEuros = amountCents / 100;
-  const foreignTxId = `BN-${appointmentId.slice(0, 8)}-${Date.now()}`;
-
-  // Annuler un éventuel paiement pending précédent
-  await supabase
-    .from('payments')
-    .update({ status: 'cancelled' as const })
-    .eq('appointment_id', appointmentId)
-    .eq('status', 'pending');
-
-  // Créer le paiement en BDD avec statut pending
+  // Enregistrer le paiement carte comme réussi
   const { error: insertErr } = await supabase.from('payments').insert({
     appointment_id: appointmentId,
     amount_cents: amountCents,
     method: 'card_sumup' as const,
-    status: 'pending' as const,
-    sumup_checkout_id: foreignTxId,
+    status: 'success' as const,
   });
 
   if (insertErr) return { error: `Erreur base de données : ${insertErr.message}` };
 
-  revalidatePath(`/calendrier/${appointmentId}`);
+  // Marquer le RDV comme terminé
+  await completeAppointmentAction(appointmentId);
 
-  return {
-    success: true,
-    amountEuros,
-    foreignTxId,
+  // Attribuer les points de fidélité
+  await awardLoyaltyPoints(
+    appointment.client_id,
     appointmentId,
-  };
+    amountCents,
+  );
+
+  revalidatePath(`/calendrier/${appointmentId}`);
+  revalidatePath('/paiements');
+
+  return { success: true };
 }
 
 // ============================================================

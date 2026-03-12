@@ -5,6 +5,25 @@ import { getPaymentByAppointment, recordCashPaymentAction } from '@/actions/paym
 import { formatCents, formatDate, formatTime } from '@/lib/utils';
 import { SumUpPaymentButton } from '@/components/payments/payment-buttons';
 
+function PaymentButtons({ appointmentId, amountFormatted }: { appointmentId: string; amountFormatted: string }) {
+  return (
+    <div className="mt-3 flex flex-wrap gap-2 items-start">
+      <SumUpPaymentButton appointmentId={appointmentId} amountFormatted={amountFormatted} />
+      <form action={async () => {
+        'use server';
+        await recordCashPaymentAction(appointmentId);
+      }}>
+        <button
+          type="submit"
+          className="rounded-md bg-surface px-4 py-2 text-sm font-medium text-prune shadow-sm ring-1 ring-border hover:bg-surface-muted"
+        >
+          Payer en espèces
+        </button>
+      </form>
+    </div>
+  );
+}
+
 export default async function AppointmentDetailPage({
   params,
 }: {
@@ -249,24 +268,11 @@ export default async function AppointmentDetailPage({
           <div className="mt-3 space-y-3">
             <div className="rounded-md bg-yellow-50 p-3">
               <p className="text-sm font-medium text-yellow-700">
-                Paiement en attente — finalisez sur le terminal SumUp.
+                Paiement en attente.
               </p>
             </div>
             {appointment.status === 'scheduled' && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                <SumUpPaymentButton appointmentId={id} />
-                <form action={async () => {
-                  'use server';
-                  await recordCashPaymentAction(id);
-                }}>
-                  <button
-                    type="submit"
-                    className="rounded-md bg-surface px-4 py-2 text-sm font-medium text-prune shadow-sm ring-1 ring-border hover:bg-surface-muted"
-                  >
-                    Payer en espèces
-                  </button>
-                </form>
-              </div>
+              <PaymentButtons appointmentId={id} amountFormatted={formatCents(appointment.final_price_cents)} />
             )}
           </div>
         ) : payment?.status === 'failed' ? (
@@ -275,39 +281,13 @@ export default async function AppointmentDetailPage({
               <p className="text-sm text-red-700">Le paiement a échoué.</p>
             </div>
             {appointment.status === 'scheduled' && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                <SumUpPaymentButton appointmentId={id} />
-                <form action={async () => {
-                  'use server';
-                  await recordCashPaymentAction(id);
-                }}>
-                  <button
-                    type="submit"
-                    className="rounded-md bg-surface px-4 py-2 text-sm font-medium text-prune shadow-sm ring-1 ring-border hover:bg-surface-muted"
-                  >
-                    Payer en espèces
-                  </button>
-                </form>
-              </div>
+              <PaymentButtons appointmentId={id} amountFormatted={formatCents(appointment.final_price_cents)} />
             )}
           </div>
         ) : (
           /* Pas encore de paiement */
           appointment.status === 'scheduled' ? (
-            <div className="mt-3 flex flex-wrap gap-2">
-              <SumUpPaymentButton appointmentId={id} />
-              <form action={async () => {
-                'use server';
-                await recordCashPaymentAction(id);
-              }}>
-                <button
-                  type="submit"
-                  className="rounded-md bg-surface px-4 py-2 text-sm font-medium text-prune shadow-sm ring-1 ring-border hover:bg-surface-muted"
-                >
-                  Payer en espèces
-                </button>
-              </form>
-            </div>
+            <PaymentButtons appointmentId={id} amountFormatted={formatCents(appointment.final_price_cents)} />
           ) : appointment.status === 'cancelled' ? (
             <p className="mt-3 text-sm text-secondary">RDV annulé — aucun paiement.</p>
           ) : null
