@@ -124,6 +124,9 @@ export function DayView({ date, appointments }: Props) {
                 className="block px-2 py-1"
               >
                 <p className="truncate text-xs font-semibold text-foreground">
+                  {apt.status === 'completed' && (
+                    <span className="inline-block mr-1 text-green-600">✓</span>
+                  )}
                   {formatTime(apt.starts_at)} – {formatTime(apt.ends_at)}
                   {apt.is_home_service && ' (domicile)'}
                 </p>

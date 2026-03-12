@@ -133,6 +133,9 @@ export function WeekView({ startDate, appointments }: Props) {
                         : 'border-l-2 border-prune bg-surface-muted text-foreground'
                     }`}
                   >
+                    {apt.status === 'completed' && (
+                      <span className="inline-block mr-0.5 text-green-600">✓</span>
+                    )}
                     <span className="font-medium">{formatTime(apt.starts_at)}</span>
                     <span className="ml-1 truncate">
                       {apt.client?.first_name?.charAt(0)}. {apt.client?.last_name}

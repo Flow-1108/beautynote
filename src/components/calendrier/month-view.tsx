@@ -166,6 +166,9 @@ export function MonthView({ year, month, appointments }: Props) {
                               : 'bg-surface-muted text-foreground'
                           }`}
                         >
+                          {apt.status === 'completed' && (
+                            <span className="inline-block mr-0.5 text-green-600">✓</span>
+                          )}
                           <span className="font-medium">{formatTime(apt.starts_at)}</span>{' '}
                           {apt.client?.last_name}
                         </Link>
